@@ -164,20 +164,20 @@ def create_book_list(newlist):
 	return books
 
 
-# output a table of cities in the vertical, books in horizontal showing share book reviews by city and rating by city BY year
-def city_table(newlist):
-	allbooks=create_book_list(newlist)
-	citylist=create_city_list(newlist)
-
-
-# same thing but for states
-def state_table(newlist):
-	pass
-
-
 # create a pandas data frame where the review is the unit of analysis
 def create_pandas(newlist):
-	
+	biglist=[]
+	for user in newlist:
+		location=user['location']
+		for book in user['books']:
+			entry=user['books'][book]
+			ident=book
+			rating=int(entry['rating'])
+			title=entry['title']
+			summer=entry['it was the summer of']
+			if rating>0:
+				biglist.append([ident,title,summer,rating,location])
+	return pd.DataFrame(biglist, columns=['ident','title','summer','rating','location'])
 
 
 
