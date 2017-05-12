@@ -7,6 +7,7 @@ import time
 from datetime import *
 from dateutil.parser import *
 from random import randint
+import pandas as pd
 
 
 states=["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
@@ -171,6 +172,13 @@ def city_table(newlist):
 
 # same thing but for states
 def state_table(newlist):
+	pass
+
+
+# create a pandas data frame where the review is the unit of analysis
+def create_pandas(newlist):
+	
+
 
 
 
