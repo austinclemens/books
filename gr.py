@@ -3,22 +3,27 @@ import xml.etree.ElementTree as ET
 import requests
 import math
 from datetime import datetime
-import time
 from datetime import *
 from dateutil.parser import *
 from random import randint
 import pandas as pd
+import json
+import re
+import time
 
 
+pd.options.display.width=280
+# genres=['adolescence','adult','animals','anthologies','art-and-photography','artificial-intelligence','audiobook','biblical','biography-memoir','bird-watching','christian','comics-manga','conservation','dark','death','diary','disability','feminism','fiction','football','futurism','futuristic','gender','gender-and-sexuality','glbt','graphic-novels-comics','graphic-novels-manga','history-and-politics','holiday','inspirational','love','management','medical','new-adult','non-fiction','occult','paranormal-urban-fantasy','planetary-science','poetry','productivity','race','relationships','romantic','romantic','science-fiction-fantasy','scinece-nature','sex-and-erotica','sequential-art','social','surreal','teaching','textbooks','united-states','war','wildlife','women-and-gender-studies','womens','thriller','mystery','science','drama','romance','self-help','plays','action','american-history','art','autobiography','crime','']
+genres=['comics','cooking','classics','crime','fantasy','historical','horror','humor','mystery','romance','science-fiction','western','biography','autobiography','history','self-help','textbook']
 states=["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
 suburb_dict={'New York City, NY': ['Brooklyn, NY','Manhattan, NY','The Bronx, NY','Bronx, NY','Queens, NY','Staten Island, NY','New York City, NY', 'New York, NY', 'Yonkers, NY', 'Mount Vernon, NY', 'New Rochelle, NY', 'White Plains, NY', 'Scarsdale, NY', 'Nyack, NY', 'South Nyack, NY', 'Sleepy Hollow, NY', 'Tarrytown, NY', 'Pelham, NY', 'Piermont, NY', 'Bronxville, NY', 'Dobbs Ferry, NY', 'Hastings-on-Hudson, NY', 'Palisades, NY', 'Tappan, NY', 'Ardsley, NY', 'Long Beach, NY', 'Great Neck, NY', 'Valley Stream, NY', 'Elmont, NY', 'New Hyde Park, NY', 'Floral Park, NY', 'Hackensack, NJ', 'Bogota, NJ', 'Englewood, NJ', 'Garfield, NJ', 'Guttenberg, NJ', 'Palisades Park, NJ', 'Jersey City, NJ', 'Hoboken, NJ', 'Rockleigh, NJ', 'Northvale, NJ', 'Norwood, NJ', 'Alpine, NJ', 'Closter, NJ', 'Haworth, NJ', 'Demarest, NJ', 'Dumont, NJ', 'Cresskill, NJ', 'Bergenfield, NJ', 'Tenafly, NJ', 'Teaneck, NJ', 'Englewood Cliffs, NJ', 'Leonia, NJ', 'Fort Lee, NJ', 'West New York, NJ'], 'Detroit, MI': ['Allen Park, MI', 'Berkley, MI', 'Center Line, MI', 'Dearborn, MI', 'Dearborn Heights, MI', 'Eastpointe, MI', 'Ecorse, MI', 'Ferndale, MI', 'Grosse Pointe, MI', 'Hamtramck, MI', 'Harper Woods, MI', 'Hazel Park, MI', 'Highland Park, MI', 'Huntington Woods, MI', 'Inkster, MI', 'Lathrup Village, MI', 'Lincoln Park, MI', 'Melvindale, MI', 'Oak Park, MI', 'Pleasant Ridge, MI', 'Redford Township, MI', 'River Rouge, MI', 'Roseville, MI', 'Royal Oak, MI', 'Royal Oak Township, MI', 'St. Clair Shores, MI', 'Southfield, MI', 'Warren, MI', 'Wayne, MI', 'Westland, MI'], 'New Orleans, LA': ['Metairie, LA', 'Kenner, LA', 'Gretna, LA', 'Harvey, LA'], 'Boston, MA': ['Cambridge, MA', 'Malden, MA', 'Somerville, MA', 'Medford, MA', 'Everett, MA', 'Revere, MA', 'Winthrop, MA', 'Quincy, MA', 'Newton, MA', 'Chelsea, MA', 'Brookline, MA', 'Dedham, MA', 'Milton, MA', 'Natick, MA', 'Wellesley, MA', 'Waltham, MA', 'Framingham, MA'], 'Kansas City, MO': ['Sugar Creek, MO', 'North Kansas City, MO', 'Gladstone, MO', 'Raytown, MO', 'Grandview, MO', 'Riverside, MO', 'Claycomo, MO', 'Northmoor, MO', 'Houston Lake, MO', 'Randolph, MO', 'Platte Woods, MO', 'Lake Waukomis, MO', 'Oaks, MO', 'Oakview, MO', 'Oakwood, MO', 'Oakwood Park, MO', 'Shawnee Mission, KS', 'Mission, KS', 'Mission Hills, KS', 'Mission Woods, KS', 'Countryside, KS', 'Fairway, KS', 'Prairie Village, KS', 'Roeland Park, KS', 'Merriam, KS', 'Westwood, KS', 'Westwood Hills, KS'], 'Miami, FL': ['Miami\xe2\x80\x93Miami Beach, FL', 'North Miami, FL', 'North Miami Beach, FL', 'South Miami, FL', 'El Portal, FL', 'Miami Gardens, FL', 'Opa-locka, FL', 'Medley, FL', 'Richmond Heights, FL', 'Coral Gables, FL', 'Fort Lauderdale, FL', 'Hollywood, FL', 'Pompano Beach, FL', 'Deerfield Beach, FL', 'Lauderhill, FL', 'Lauderdale Lakes, FL', 'North Lauderdale, FL', 'Wilton Manors, FL', 'Dania Beach, FL', 'Hallandale Beach, FL'], 'Tampa Bay Area, FL': ['Hillsborough County, FL', 'Brandon, FL', 'East Lake-Orient Park, FL', 'Egypt Lake-Leto, FL', 'Gibsonton, FL', 'Greater Carrollwood, FL', 'Lake Magdalene, FL', 'Palm River-Clair Mel, FL', 'Pebble Creek, FL', 'Progress Village, FL', 'Riverview, FL', 'Seffner, FL', 'Temple Terrace, FL', "Town 'n' Country, FL", 'University, FL', 'Westchase, FL', 'St. Petersburg, FL', 'Clearwater, FL', 'Dunedin, FL', 'Indian Rocks Beach, FL', 'Largo, FL', 'Pinellas Park, FL', 'Tarpon Springs, FL'], 'Minneapolis-St. Paul, MN': ['Minneapolis, MN', 'Brooklyn Center, MN', 'Columbia Heights, MN', 'Edina, MN', 'Fridley, MN', 'Golden Valley, MN', 'Richfield, MN', 'Robbinsdale, MN', 'St. Anthony, MN', 'St. Louis Park, MN', 'St. Paul, MN', 'Falcon Heights, MN', 'Little Canada, MN', 'Maplewood, MN', 'Mendota Heights, MN', 'West St. Paul, MN', 'Roseville, MN'], 'Philadelphia, PA': ['Cheltenham, PA', 'Chester, PA', 'Haverford, PA', 'Lower Merion, PA', 'Upper Darby, PA', 'Camden, NJ', 'Collingswood, NJ', 'Haddonfield, NJ', 'Haddon Township, NJ', 'Haddon Heights, NJ', 'Gloucester City, NJ', 'Merchantville, NJ', 'Pennsauken, NJ', 'Palmyra, NJ', 'Riverton, NJ'], 'Memphis, TN': ['Bartlett, TN', 'Cordova, TN', 'Germantown, TN', 'Hickory Hill, TN', 'Whitehaven, TN'], 'Los Angeles, CA': ['Alhambra, CA', 'Compton, CA', 'Culver City, CA', 'East Los Angeles, CA', 'Montebello, CA', 'Monterey Park, CA', 'Glendale, CA', 'Hawthorne, CA', 'Huntington Park, CA', 'Inglewood, CA', 'Lynwood, CA', 'Maywood, CA', 'Santa Monica, CA', 'West Hollywood, CA'], 'Baltimore, MD': ['Arbutus, MD', 'Baltimore Highlands, MD', 'Brooklyn Park, MD', 'Carney, MD', 'Catonsville, MD', 'Dundalk, MD', 'Halethorpe, MD', 'Lansdowne, MD', 'Linthicum, MD', 'Lochearn, MD', 'Overlea, MD', 'Parkville, MD', 'Pikesville, MD', 'Pumphrey, MD', 'Riderwood, MD', 'Rodgers Forge, MD', 'Rosedale, MD', 'Ruxton, MD', 'Sudbrook Park, MD', 'Towson, MD', 'Woodlawn, MD'], 'Albany, NY': ['East Greenbush, NY', 'Guilderland, NY', 'Menands, NY', 'North Greenbush, NY'], 'Phoenix, AZ': ['Avondale, AZ', 'Glendale, AZ', 'Tolleson, AZ', 'Peoria, AZ', 'Tempe, AZ', 'Guadalupe, AZ', 'Scottsdale, AZ', 'Paradise Valley, AZ', 'Mesa, AZ', 'Chandler, AZ', 'Buckeye, AZ', 'Goodyear, AZ', 'Avondale, AZ', 'Surprise, AZ', 'Gilbert, AZ', 'Maricopa, AZ'], 'St. Louis, MO': ['Affton, MO', 'Lemay, MO', 'Maplewood, MO', 'Shrewsbury, MO', 'Webster Groves, MO', 'Clayton, MO', 'University City, MO', 'Pine Lawn, MO', 'Jennings, MO', 'Hazelwood, MO', 'Bridgeton, MO', 'Maryland Heights, MO', 'Florissant, MO', 'Town and Country, MO', 'Ladue, MO', 'Ferguson, MO', 'Olivette, MO', 'Creve Coeur, MO', 'Fenton, MO', 'Mehlville, MO', 'Richmond Heights, MO', 'St. Ann, MO', 'Kirkwood, MO', 'Normandy, MO', 'Brentwood, MO', 'Sunset Hills, MO', 'East St. Louis, MO'], 'San Francisco Bay Area': ['San Francisco, CA', 'Daly City, CA', 'Colma, CA', 'Brisbane, CA', 'Broadmoor, CA', 'Pacifica, CA', 'South San Francisco, CA', 'Oakland, CA', 'Alameda, CA', 'Emeryville, CA', 'Hayward, CA', 'San Leandro, CA', 'San Jose, CA', 'Campbell, CA', 'Cupertino, CA', 'Los Gatos, CA', 'Milpitas, CA', 'Santa Clara, CA'], 'Chicago, IL': ['Alsip, IL', 'Bedford Park, IL', 'Bensenville, IL', 'Berwyn, IL', 'Blue Island, IL', 'Bridgeview, IL', 'Burbank, IL', 'Burnham, IL', 'Calumet City, IL', 'Calumet Park, IL', 'Chicago Heights, IL', 'Chicago Ridge, IL', 'Cicero, IL', 'Des Plaines, IL', 'Dolton, IL', 'Elmwood Park, IL', 'Evanston, IL', 'Evergreen Park, IL', 'Franklin Park, IL', 'Harvey, IL', 'Harwood Heights, IL', 'Hickory Hills, IL', 'Hometown, IL', 'Lincolnwood, IL', 'Markham, IL', 'Merrionette Park, IL', 'Morton Grove, IL', 'Mount Prospect, IL', 'Niles, IL', 'Norridge, IL', 'Oak Lawn, IL', 'Oak Park, IL', 'Park Ridge, IL', 'River Forest, IL', 'Riverside, IL', 'River Grove, IL', 'Riverdale, IL', 'Rosemont, IL', 'Schiller Park, IL', 'Skokie, IL', 'Stickney, IL', 'Summit, IL', 'Hammond, IL'], 'Dallas, TX': ['Addison, TX', 'Balch Springs, TX', 'Carrollton, TX', 'Cockrell Hill, TX', 'DeSoto, TX', 'Duncanville, TX', 'Farmers Branch, TX', 'Garland, TX', 'Grand Prairie, TX', 'Highland Park, TX', 'Irving, TX', 'Mesquite, TX', 'Plano, TX', 'Richardson, TX', 'University Park, TX', 'Fort Worth, TX', 'Arlington, TX', 'Bedford, TX', 'Dalworthington Gardens, TX', 'Euless, TX', 'Forest Hill, TX', 'Haltom City, TX', 'Hurst, TX', 'North Richland Hills, TX', 'Pantego, TX', 'Richland Hills, TX', 'River Oaks, TX', 'Sansom Park, TX', 'Westover Hills, TX', 'Westworth Village, TX', 'White Settlement, TX'], 'Cincinnati, OH': ['Arlington Heights, OH', 'Amberley, OH', 'Cheviot, OH', 'Deer Park, OH', 'Elmwood Place, OH', 'Forest Park, OH', 'Golf Manor, OH', 'Lockland, OH', 'Mount Healthy, OH', 'North College Hill, OH', 'Norwood, OH', 'Reading, OH', 'Silverton, OH', 'Springdale, OH', 'St. Bernard, OH', 'Wyoming, OH', 'Bellevue, KY', 'Covington, KY', 'Ludlow, KY', 'Newport, KY', 'Dayton, KY', 'Fort Thomas, KY'], 'Las Vegas, NV': ['North Las Vegas, NV', 'Henderson, NV', 'Boulder City, NV', 'Paradise, NV', 'Spring Valley, NV', 'Winchester, NV', 'Sunrise Manor, NV', 'Whitney, NV'], 'Pittsburgh, PA': ['Crafton, PA', 'Ingram, PA', 'McKees Rocks, PA', 'Brentwood, PA', 'Green Tree, PA', 'Carnegie, PA', 'Dormont, PA', 'Mt. Lebanon, PA', 'Baldwin, PA', 'Castle Shannon, PA', 'Whitehall, PA', 'Munhall, PA', 'Homestead, PA', 'Braddock, PA', 'Swissvale, PA', 'Edgewood, PA', 'Wilkinsburg, PA', 'Shaler, PA', 'Bellevue, PA', 'West View, PA', 'Millvale, PA', 'Sharpsburg, PA'], 'Washington, DC': ['Bethesda, MD', 'Bladensburg, MD', 'Brentwood, MD', 'Cheverly, MD', 'Chevy Chase, MD', 'College Park, MD', 'Cottage City, MD', 'District Heights, MD', 'Gaithersburg, MD', 'Hillcrest Heights, MD', 'Hyattsville, MD', 'Kensington, MD', 'Mount Rainier, MD', 'Montgomery Village, MD', 'North Brentwood, MD', 'Rockville, MD', 'Seat Pleasant, MD', 'Silver Spring, MD', 'Suitland, MD', 'Takoma Park, MD', 'Alexandria, VA', 'Annandale, VA', 'Arlington, VA', 'Falls Church, VA', 'McLean, VA', 'Pimmit Hills, VA', 'Springfield, VA'], 'Indianapolis, IN': ['Beech Grove, IN', 'Carmel, IN', 'Clermont, IN', 'Fishers, IN', 'Greenwood, IN', 'Lawrence, IN', 'Meridian Hills, IN', 'Southport, IN', 'Speedway, IN'], 'Atlanta, GA': ['Belvedere Park, GA', 'Brookhaven, GA', 'Candler-McAfee, GA', 'Chamblee, GA', 'College Park, GA', 'Decatur, GA', 'Druid Hills, GA', 'East Point, GA', 'Gresham Park, GA', 'Hapeville, GA', 'Marietta, GA', 'North Atlanta, GA', 'North Druid Hills, GA', 'Sandy Springs, GA', 'Smyrna, GA', 'Vinings, GA'], 'Dayton, OH': ['Beavercreek, OH', 'Huber Heights, OH', 'Kettering, OH', 'Moraine, OH', 'Oakwood, OH', 'Riverside, OH', 'Trotwood, OH', 'Vandalia, OH', 'West Carrollton, OH'], 'Houston, TX': ['Aldine, TX', 'Bellaire, TX', 'Channelview, TX', 'Galena Park, TX', 'Humble, TX', 'Jersey Village, TX', 'Katy, TX', 'Meadows Place, TX', 'Pasadena, TX', 'Pearland, TX', 'Stafford, TX', 'League City, TX', 'Missouri City, TX', 'Webster, TX'], 'Cleveland, OH': ['Bratenahl, OH', 'Brook Park, OH', 'Brooklyn, OH', 'Brooklyn Heights, OH', 'Cleveland Heights, OH', 'Cuyahoga Heights, OH', 'East Cleveland, OH', 'Fairview Park, OH', 'Euclid, OH', 'Garfield Heights, OH', 'Lakewood, OH', 'Linndale, OH', 'Maple Heights, OH', 'Newburgh Heights, OH', 'Parma, OH', 'Shaker Heights, OH', 'South Euclid, OH', 'University Heights, OH', 'Warrensville Heights, OH']}
-
+key=open('/Users/austinclemens/Desktop/books/key.txt','r').read()
 
 # take a user id and compile a list of their books, review scores, and review timestamps
 def get_user(id):
 	print 'user ',id
 	# get info on the user and snag the number of reviews they have
-	r=requests.get('https://www.goodreads.com/user/show/'+str(id)+'.xml?key=dmwbkVnT22qTAl69ncwjA')
+	r=requests.get('https://www.goodreads.com/user/show/'+str(id)+'.xml?key='+key)
 	root=ET.fromstring(r.text.encode('ascii','ignore'))
 	try:
 		reviews=root.find('user/reviews_count').text
@@ -33,7 +38,7 @@ def get_user(id):
 	if any(state in location for state in states):
 		# get a user's shelf, one page at a time
 		for page in range(1,1+int(math.ceil(int(reviews)/200))):
-			r=requests.get('https://www.goodreads.com/review/list?v=2&id='+str(id)+'&page='+str(page)+'&key=dmwbkVnT22qTAl69ncwjA&per_page=200')
+			r=requests.get('https://www.goodreads.com/review/list?v=2&id='+str(id)+'&page='+str(page)+'&key='+key+'&per_page=200')
 			root=ET.fromstring(r.text.encode('ascii','ignore'))
 			for book in root.findall('reviews/review'):
 				test=check_date(book.find('date_added').text)
@@ -164,6 +169,50 @@ def create_book_list(newlist):
 	return books
 
 
+# quick way to get a booklist
+def create_quick_booklist(newlist):
+	books=[]
+	for user in newlist:
+		for book in user['books'].keys():
+			books.append(book)
+	return books
+
+
+# take a list of user dicts and assign a genre to each book
+def get_genres(newlist):
+	genres=[]
+	booklist=create_quick_booklist(newlist)
+	bookdict={}
+	for book in booklist:
+		print book
+		bookdict[book]=[]
+		r=requests.get('https://www.goodreads.com/book/show.xml?key='+key+'&id='+book)
+		root=ET.fromstring(r.text.encode('ascii','ignore'))
+		shelves=root.findall('book/popular_shelves/shelf')
+		total_genre_votes=0
+		for shelf in shelves:
+			bookdict[book].append([shelf.get('name'),int(shelf.get('count'))])
+			total_genre_votes=total_genre_votes+int(shelf.get('count'))
+			genres.append(shelf.get('name'))
+		for shelf in bookdict[book]:
+			shelf[1]=shelf[1]/total_genre_votes
+		time.sleep(1)
+	genres=list(set(genres))
+	for user in newlist:
+		for book in user['books']:
+			user['books'][book]['genres']=bookdict[book]
+	return newlist
+
+
+def genre_list(newlist):
+	glist=[]
+	for user in newlist:
+		for book in user['books']:
+			for g in user['books'][book]['genres']:
+				glist.append(g[0])
+	return list(set(glist))
+
+
 # create a pandas data frame where the review is the unit of analysis
 def create_pandas(newlist):
 	biglist=[]
@@ -175,11 +224,22 @@ def create_pandas(newlist):
 			rating=int(entry['rating'])
 			title=entry['title']
 			summer=entry['it was the summer of']
+			entry=[ident,title,summer,rating,location]
+			glist=[g[0] for g in user['books'][book]['genres']]
+			for genre in genres:
+				if genre in glist:
+					entry.append(1)
+				else:
+					entry.append(0)
 			if rating>0:
-				biglist.append([ident,title,summer,rating,location])
-	return pd.DataFrame(biglist, columns=['ident','title','summer','rating','location'])
+				biglist.append(entry)
+	print biglist
+	return pd.DataFrame(biglist, columns=['ident','title','summer','rating','location','comics','cooking','classics','crime','fantasy','historical','horror','humor','mystery','romance','science-fiction','western','biography','autobiography','history','self-help','textbook'])
 
 
+# get distinctive books by city and state and year
+def distinctive_books(df):
+	df.grouby()
 
 
 
